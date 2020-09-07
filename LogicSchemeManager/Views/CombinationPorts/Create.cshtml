@@ -1,0 +1,43 @@
+﻿@model LogicSchemeManager.Models.CombinationPort
+
+@{
+    ViewData["Title"] = "Create";
+}
+
+<h2>Create</h2>
+
+<h4>CombinationPort</h4>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <form asp-action="Create">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-group">
+                <label asp-for="CombinationId" class="control-label"></label>
+                <select asp-for="CombinationId" class ="form-control" asp-items="ViewBag.CombinationId"></select>
+            </div>
+            <div class="form-group">
+                <label asp-for="PortId" class="control-label"></label>
+                <select asp-for="PortId" class ="form-control" asp-items="ViewBag.PortId"></select>
+            </div>
+            <div class="form-group">
+                <div class="checkbox">
+                    <label>
+                        <input asp-for="Value" /> @Html.DisplayNameFor(model => model.Value)
+                    </label>
+                </div>
+            </div>
+            <div class="form-group">
+                <input type="submit" value="Create" class="btn btn-default" />
+            </div>
+        </form>
+    </div>
+</div>
+
+<div>
+    <a asp-action="Index">Back to List</a>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

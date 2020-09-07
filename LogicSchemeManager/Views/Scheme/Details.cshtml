@@ -1,0 +1,282 @@
+﻿@model LogicSchemeManager.Models.Schema
+
+@{
+    ViewData["Title"] = "Details";
+}
+
+<h2>Details</h2>
+
+<div>
+    <h4>Schema</h4>
+    <hr />
+    <dl class="dl-horizontal">
+        <dt>
+            @Html.DisplayNameFor(model => model.Name)
+        </dt>
+        <dd>
+            @Html.DisplayFor(model => model.Name)
+        </dd>
+    </dl>
+</div>
+
+<div id="network" style="height: 500px;">
+
+</div>
+<div id="myQmcDisplay"></div>
+<div>
+    <a asp-action="Edit" asp-route-id="@Model.SchemaId">Edit</a> |
+    <a asp-action="Index">Back to List</a>
+    <button class="truth-table-btn btn btn-info" onclick="getTruthTable(true);">Get truth table</button>
+    <button class="truth-table-btn btn btn-info" onclick="getTruthTable(false);">Get extended truth table</button>
+    <button class="btn btn-default minimize-btn disabled" style="display:none" onclick="runMinimization();">Minimize</button>
+    <button class="btn btn-success" onclick="savePosition();">Save coordinates</button>
+</div>
+
+<div id="error-check" class="container-fluid" style="margin: 20px auto;display: none;">
+    <div class="row">
+        <div class="form-group col-xs-12 col-md-4">
+            <label class="control-label">Port</label>
+            <select id="error-element-port" class="form-control" asp-items="ViewBag.OutptElementPorts"></select>
+        </div>
+        <div class="col-xs-12 col-md-4" style="padding-top: 30px;">
+            <label for="error-value"><input id="error-value" type="checkbox" />Error value</label>
+        </div>
+        <div class="col-xs-12 col-md-4" style="padding-top: 30px;">
+            <button class="truth-table-error-btn btn btn-primary col-xs-12 col-md-4" onclick="getErrorTruthTable();">Get vetctors</button>
+        </div>
+    </div>
+</div>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="table truth-table">
+                <table class="table-bordered table-condensed table-hover table-responsive table-striped">
+                    <thead>
+
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="table error-table">
+                <table class="table-bordered table-condensed table-hover table-responsive table-striped">
+                    <thead>
+
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    var data = {};
+    var container = document.getElementById('network');
+    var truthTableOutputs = [];
+    var truthTableInputNames = [];
+    var countInputs = 0;
+    var options = {
+        "nodes": {
+            "color": {
+                "border": "rgba(0,0,0,1)",
+                "background": "rgba(255,246,251,1)",
+                "highlight": {},
+                "hover": {}
+            },
+            "font": {
+                "size": 20,
+                "strokeWidth": 3
+            },
+            "shape": "box",
+            "shapeProperties": {
+                "borderRadius": 0
+            },
+            "size": 50
+        },
+        "edges": {
+            "arrows": {
+                "to": {
+                    "enabled": true
+                }
+            },
+            "font": {
+                "size": 15,
+                "strokeWidth": 3,
+                "align": "middle"
+            },
+            "scaling": {
+                "max": 53
+            },
+            "selfReferenceSize": 200,
+            "smooth": false,
+            "width": 2
+        },
+        interaction: { dragNodes: true },
+        physics: {
+            enabled: false
+        }
+    };
+    var network = {};
+</script>
+<script>
+    window.onload = function () {
+        drawVisSchema();
+    };
+    function getItemData(nodeID) {
+        for (var index in data.nodes) {
+            if (data.nodes[index].id == nodeID) {
+                return data.nodes[index].hasOwnProperty('elementPortId') ?
+                    { itemId: data.nodes[index].elementPortId, isPort: true } :
+                    { itemId: data.nodes[index].id, isPort: false };
+            }
+        }
+    }
+    function savePosition() {
+        var objectCoords = network.getPositions();
+        var requestData = [];
+        for (var nodeID in objectCoords) {
+            if (objectCoords.hasOwnProperty(nodeID)) {
+                var item = getItemData(nodeID);
+                item.x = objectCoords[nodeID].x;
+                item.y = objectCoords[nodeID].y;
+                requestData.push(item);
+            }
+        }
+
+        $.ajax({
+            method: 'PUT',
+            url: "/api/vis/" + @Model.SchemaId,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            data: JSON.stringify(requestData),
+            success: function (result) {
+                drawVisSchema();
+            }
+        });
+
+    }
+    function drawVisSchema() {
+        $.ajax({
+            url: '/api/vis/' + @Model.SchemaId,
+            type: 'GET',
+            contentType: "application/json",
+            success: function (visdata) {
+                data = visdata;
+                network = new vis.Network(container, data, options);
+            }
+        });
+    }
+    function getTruthTable(mode) {
+        $('.truth-table-btn').addClass('disabled');
+        $.ajax({
+            url: '/api/function/' + @Model.SchemaId + '/' + mode,
+            type: 'GET',
+            contentType: "application/json",
+            success: function (truthTableRows) {
+                $(".truth-table>table tbody").html('');
+                var rows = "";
+                $.each(truthTableRows.rows, function (index, truthTableRow) {
+                    if (index == 0) {
+                        $(".truth-table>table thead").html(header(truthTableRow, mode, false));
+                    }
+                    // добавляем полученные элементы в таблицу
+                    rows += row(truthTableRow, mode, false, index);
+                });
+                $(".truth-table>table tbody").append(rows);
+                $('.truth-table-btn').removeClass('disabled');
+                if (mode == true) {
+                    $("#error-check").show();
+                    $('.minimize-btn').removeClass('disabled');
+                    $('.minimize-btn').show();
+                }
+                else {
+                    $('.minimize-btn').hide();
+                }
+            }
+        });
+    }
+
+    function getErrorTruthTable() {
+        $('.truth-table-error-btn').addClass('disabled');
+        var elementPortId = $("#error-element-port").val();
+        var elementPortValue = $("#error-value").prop('checked');
+        $.ajax({
+            url: '/api/function/' + @Model.SchemaId + '/' + elementPortId + '/' + elementPortValue,
+            type: 'POST',
+            contentType: "application/json",
+            success: function (truthTableRows) {
+                $(".error-table>table tbody").html('');
+                var rows = "";
+                $.each(truthTableRows.rows, function (index, truthTableRow) {
+                    if (index == 0) {
+                        $(".error-table>table thead").html(header(truthTableRow));
+                    }
+                    // добавляем полученные элементы в таблицу
+                    rows += row(truthTableRow, false, true, index);
+                });
+                $(".error-table>table tbody").append(rows);
+                $(".truth-table").addClass("col-md-6");
+                $(".error-table").addClass("col-md-6");
+                $('.truth-table-error-btn').removeClass('disabled');
+            }
+        });
+    }
+
+    function header(truthTableRow, isTrueTruthTable, isErrorTable) {
+        var result = "<tr>";
+        countInputs = 0;
+        for (var index in truthTableRow.inputs) {
+            if (truthTableRow.inputs.hasOwnProperty(index)) {
+                countInputs++;
+                if (isTrueTruthTable)
+                    truthTableInputNames.push(index);
+                result += "<th>" + index + "</th>";
+            }
+        }
+        result += "<th></th>";
+        for (var index in truthTableRow.outputs) {
+            if (truthTableRow.outputs.hasOwnProperty(index)) {
+                result += "<th>" + index + "</th>";
+            }
+        }
+        result += "</tr>";
+        return result;
+    }
+    function row(truthTableRow, isTrueTruthTable, isErrorTable, i) {
+        var result = "<tr>";
+        for (var index in truthTableRow.inputs) {
+            if (truthTableRow.inputs.hasOwnProperty(index)) {
+                result += "<td>" + truthTableRow.inputs[index] + "</td>";
+            }
+        }
+        result += "<td></td>";
+
+        //ToDO: check for many output elements
+        for (var index in truthTableRow.outputs) {
+            if (truthTableRow.outputs.hasOwnProperty(index)) {
+                if (isTrueTruthTable)
+                    truthTableOutputs.push(truthTableRow.outputs[index]);
+
+                if (isErrorTable && truthTableOutputs[i] == truthTableRow.outputs[index])
+                    return '';
+
+                result += "<td>" + truthTableRow.outputs[index] + "</td>";
+            }
+        }
+        result += "</tr>";
+        return result;
+    }
+</script>
+<script language="JavaScript" type="text/javascript">
+    var qmc = -1;
+    function runMinimization() {
+        $(".minimize-btn").addClass('disabled');
+        //qmc = new QuineMcCluskey("fakeDivId", columns, 0, 0);
+        qmc = new QuineMcCluskey("myQmcDisplay", countInputs, 0);
+        qmc.init();
+        //ToDO: apply for many output elements
+        qmc.data.applyData(truthTableOutputs, truthTableInputNames, true, false);
+        qmc.update();
+    }
+</script>

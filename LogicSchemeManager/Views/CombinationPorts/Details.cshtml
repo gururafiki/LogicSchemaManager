@@ -1,0 +1,36 @@
+﻿@model LogicSchemeManager.Models.CombinationPort
+
+@{
+    ViewData["Title"] = "Details";
+}
+
+<h2>Details</h2>
+
+<div>
+    <h4>CombinationPort</h4>
+    <hr />
+    <dl class="dl-horizontal">
+        <dt>
+            @Html.DisplayNameFor(model => model.Combination)
+        </dt>
+        <dd>
+            @Html.DisplayFor(model => model.Combination.CombinationId)
+        </dd>
+        <dt>
+            @Html.DisplayNameFor(model => model.Port)
+        </dt>
+        <dd>
+            @Html.DisplayFor(model => model.Port.PortId)
+        </dd>
+        <dt>
+            @Html.DisplayNameFor(model => model.Value)
+        </dt>
+        <dd>
+            @Html.DisplayFor(model => model.Value)
+        </dd>
+    </dl>
+</div>
+<div>
+    <a asp-action="Edit" asp-route-id="@Model.CombinationPortId">Edit</a> |
+    <a asp-action="Index">Back to List</a>
+</div>
